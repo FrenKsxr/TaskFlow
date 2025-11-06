@@ -9,7 +9,7 @@ interface ApiTask {
   descripcion: string
   fecha_limite: string
   prioridad: "Alta" | "Media" | "Baja"
-  estado: "Pendiente" | "En proceso" | "Completada"
+  estado: "Pendiente" | "En proceso" | "Completado" | "Completada"
 }
 
 // Internal Task format (used in frontend)
@@ -20,13 +20,23 @@ function apiToTask(apiTask: ApiTask | Partial<ApiTask>): Task {
   if (!apiTask || apiTask.id === undefined) {
     throw new Error("Invalid API task response: missing id")
   }
+  // Map API status to internal status
+  let internalStatus: Status = "Pendiente"
+  if (apiTask.estado === "En proceso") {
+    internalStatus = "En Progreso"
+  } else if (apiTask.estado === "Completado" || apiTask.estado === "Completada") {
+    internalStatus = "Completada"
+  } else if (apiTask.estado === "Pendiente") {
+    internalStatus = "Pendiente"
+  }
+  
   return {
     id: apiTask.id.toString(),
     title: apiTask.nombre || "",
     description: apiTask.descripcion || "",
     deadline: apiTask.fecha_limite || "",
     priority: apiTask.prioridad || "Media",
-    status: apiTask.estado === "En proceso" ? "En Progreso" : (apiTask.estado || "Pendiente"),
+    status: internalStatus,
     createdAt: new Date().toISOString(), // API doesn't provide this, using current date
   }
 }
@@ -39,19 +49,55 @@ function taskToApi(task: Omit<Task, "id" | "createdAt"> | Partial<Task>): Partia
   if ("deadline" in task && task.deadline !== undefined) apiTask.fecha_limite = task.deadline
   if ("priority" in task && task.priority !== undefined) apiTask.prioridad = task.priority
   if ("status" in task && task.status !== undefined) {
-    apiTask.estado = task.status === "En Progreso" ? "En proceso" : task.status
+    // Map internal status to API format - API uses "Completado" (masculine)
+    let mappedStatus: "Pendiente" | "En proceso" | "Completado"
+    switch (task.status.trim()) {
+      case "Pendiente":
+        mappedStatus = "Pendiente"
+        break
+      case "En Progreso":
+        mappedStatus = "En proceso"
+        break
+      case "Completada":
+        mappedStatus = "Completado" // API uses "Completado" (masculine)
+        break
+      default:
+        // Fallback: try to match case-insensitive
+        const lowerStatus = task.status.toLowerCase().trim()
+        if (lowerStatus.includes("pendiente")) {
+          mappedStatus = "Pendiente"
+        } else if (lowerStatus.includes("proceso") || lowerStatus.includes("progreso")) {
+          mappedStatus = "En proceso"
+        } else if (lowerStatus.includes("completad")) {
+          mappedStatus = "Completado" // API uses "Completado"
+        } else {
+          mappedStatus = "Pendiente" // Default fallback
+        }
+    }
+    apiTask.estado = mappedStatus
+    console.log("Status mapping:", { original: task.status, mapped: apiTask.estado })
   }
   return apiTask
 }
 
 // Helper to create complete API task (for POST)
 function taskToApiComplete(task: Omit<Task, "id" | "createdAt">): Omit<ApiTask, "id"> {
+  // Map internal status to API format
+  let apiEstado: "Pendiente" | "En proceso" | "Completado"
+  if (task.status === "En Progreso") {
+    apiEstado = "En proceso"
+  } else if (task.status === "Completada") {
+    apiEstado = "Completado" // API uses "Completado" (masculine)
+  } else {
+    apiEstado = "Pendiente"
+  }
+  
   return {
     nombre: task.title,
     descripcion: task.description,
     fecha_limite: task.deadline,
     prioridad: task.priority,
-    estado: task.status === "En Progreso" ? "En proceso" : task.status,
+    estado: apiEstado,
   }
 }
 
@@ -191,6 +237,8 @@ export async function createTask(task: Omit<Task, "id" | "createdAt">): Promise<
 // PUT update task
 export async function updateTask(id: string, task: Partial<Task>): Promise<Task> {
   const apiTask = taskToApi(task)
+  console.log("Updating task:", { id, originalTask: task, apiTask })
+  
   const response = await fetch(`${API_BASE_URL}/tareas/${id}`, {
     method: "PUT",
     headers: {
