@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Code2, Layers } from "lucide-react";
 
 export default function EstrategiasPage() {
-  const { tasks } = useTasks();
+  const { tasks, loading } = useTasks();
   const [sorter] = useState(() => new TaskSorter(availableStrategies[0]));
   const [currentStrategy, setCurrentStrategy] = useState<TaskSortStrategy>(availableStrategies[0]);
 
@@ -118,7 +118,11 @@ export default function EstrategiasPage() {
           </div>
         </div>
 
-        {sortedTasks.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>Cargando tareas...</p>
+          </div>
+        ) : sortedTasks.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p>No hay tareas para ordenar</p>
           </div>

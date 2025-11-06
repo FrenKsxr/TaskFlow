@@ -68,9 +68,9 @@ export function TaskCharts() {
               Media: { label: "Media", color: "hsl(var(--priority-medium))" },
               Baja: { label: "Baja", color: "hsl(var(--priority-low))" },
             }}
-            className="h-[300px]"
+            className="h-[300px] min-w-0"
           >
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <BarChart data={priorityData}>
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -98,9 +98,9 @@ export function TaskCharts() {
               "En Progreso": { label: "En Progreso", color: "hsl(var(--status-progress))" },
               Completada: { label: "Completada", color: "hsl(var(--status-completed))" },
             }}
-            className="h-[300px]"
+            className="h-[300px] min-w-0"
           >
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
                 <Pie
                   data={statusData}
@@ -136,8 +136,8 @@ export function TaskCharts() {
                   {completed} de {total} tareas completadas
                 </p>
               </div>
-              <div className="h-32 w-32">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-32 w-32 min-w-[128px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={128}>
                   <PieChart>
                     <Pie
                       data={progressData}

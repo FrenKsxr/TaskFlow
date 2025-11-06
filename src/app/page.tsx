@@ -7,7 +7,7 @@ import { TaskStats } from "@/components/task-stats"
 import { useTasks } from "@/lib/task-context"
 
 export default function HomePage() {
-  const { tasks } = useTasks()
+  const { tasks, loading } = useTasks()
 
   return (
     <div className="min-h-[calc(100vh-4rem)]">
@@ -36,18 +36,26 @@ export default function HomePage() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        {tasks.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Resumen de Tareas</h2>
-            <TaskStats />
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Cargando tareas...</p>
           </div>
-        )}
+        ) : (
+          <>
+            {tasks.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold mb-6">Resumen de Tareas</h2>
+                <TaskStats />
+              </div>
+            )}
 
-        {tasks.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Análisis Visual</h2>
-            <TaskCharts />
-          </div>
+            {tasks.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold mb-6">Análisis Visual</h2>
+                <TaskCharts />
+              </div>
+            )}
+          </>
         )}
 
         <div>

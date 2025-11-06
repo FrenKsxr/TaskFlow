@@ -86,20 +86,29 @@ export function TaskForm({ open, onOpenChange, task }: TaskFormProps) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validate()) {
       return
     }
 
-    if (task) {
-      updateTask(task.id, formData)
-    } else {
-      addTask(formData)
+    setIsSubmitting(true)
+    try {
+      if (task) {
+        await updateTask(task.id, formData)
+      } else {
+        await addTask(formData)
+      }
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Error submitting form:", error)
+      // Error is handled by context, but we keep the form open
+    } finally {
+      setIsSubmitting(false)
     }
-
-    onOpenChange(false)
   }
 
   return (
@@ -193,10 +202,12 @@ export function TaskForm({ open, onOpenChange, task }: TaskFormProps) {
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit">{task ? "Guardar Cambios" : "Crear Tarea"}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Guardando..." : task ? "Guardar Cambios" : "Crear Tarea"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

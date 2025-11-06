@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 
 export default function TareasPage() {
-  const { tasks } = useTasks()
+  const { tasks, loading, error } = useTasks()
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [filters, setFilters] = useState<FilterState>({
@@ -43,6 +43,12 @@ export default function TareasPage() {
         </Button>
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
+          <p className="font-medium">Error: {error}</p>
+        </div>
+      )}
+
       <TaskStats />
 
       <div className="mt-6">
@@ -56,7 +62,11 @@ export default function TareasPage() {
             : `Tareas Filtradas (${filteredTasks.length} de ${tasks.length})`}
         </h2>
 
-        {filteredTasks.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Cargando tareas...</p>
+          </div>
+        ) : filteredTasks.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <p>
               {tasks.length === 0

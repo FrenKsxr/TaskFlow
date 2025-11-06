@@ -81,7 +81,13 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
           <Button
             size="sm"
             variant={task.status === "Completada" ? "outline" : "default"}
-            onClick={() => toggleTaskStatus(task.id)}
+            onClick={async () => {
+              try {
+                await toggleTaskStatus(task.id)
+              } catch (error) {
+                console.error("Error toggling task status:", error)
+              }
+            }}
             className="flex-1"
           >
             <Check className="h-4 w-4 mr-1" />
@@ -93,9 +99,14 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => {
+            onClick={async () => {
               if (confirm("¿Estás seguro de eliminar esta tarea?")) {
-                deleteTask(task.id)
+                try {
+                  await deleteTask(task.id)
+                } catch (error) {
+                  console.error("Error deleting task:", error)
+                  alert("Error al eliminar la tarea. Por favor, intenta de nuevo.")
+                }
               }
             }}
           >

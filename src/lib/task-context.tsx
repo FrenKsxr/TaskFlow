@@ -1,113 +1,90 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import type { Task, Status } from "./types"
+import { fetchTasks, createTask, updateTask as updateTaskApi, deleteTask as deleteTaskApi } from "./api"
 
 interface TaskContextType {
   tasks: Task[]
-  addTask: (task: Omit<Task, "id" | "createdAt">) => void
-  updateTask: (id: string, task: Partial<Task>) => void
-  deleteTask: (id: string) => void
-  toggleTaskStatus: (id: string) => void
+  loading: boolean
+  error: string | null
+  addTask: (task: Omit<Task, "id" | "createdAt">) => Promise<void>
+  updateTask: (id: string, task: Partial<Task>) => Promise<void>
+  deleteTask: (id: string) => Promise<void>
+  toggleTaskStatus: (id: string) => Promise<void>
+  refreshTasks: () => Promise<void>
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined)
 
-const initialTasks: Task[] = [
-  {
-    id: "1",
-    title: "Implementar autenticación",
-    description: "Crear sistema de login y registro de usuarios",
-    deadline: "2025-01-15",
-    priority: "Alta",
-    status: "En Progreso",
-    createdAt: "2025-01-01T10:00:00Z",
-  },
-  {
-    id: "2",
-    title: "Diseñar base de datos",
-    description: "Crear esquema de base de datos para el proyecto",
-    deadline: "2025-01-20",
-    priority: "Alta",
-    status: "Completada",
-    createdAt: "2025-01-02T14:30:00Z",
-  },
-  {
-    id: "3",
-    title: "Documentar API",
-    description: "Escribir documentación completa de endpoints",
-    deadline: "2025-02-01",
-    priority: "Media",
-    status: "Pendiente",
-    createdAt: "2025-01-03T09:15:00Z",
-  },
-  {
-    id: "4",
-    title: "Optimizar rendimiento",
-    description: "Mejorar tiempos de carga de la aplicación",
-    deadline: "2025-02-15",
-    priority: "Baja",
-    status: "Pendiente",
-    createdAt: "2025-01-04T16:45:00Z",
-  },
-  {
-    id: "5",
-    title: "Pruebas unitarias",
-    description: "Implementar suite completa de tests",
-    deadline: "2025-01-25",
-    priority: "Media",
-    status: "En Progreso",
-    createdAt: "2025-01-05T11:20:00Z",
-  },
-]
-
 export function TaskProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const fetchedTasks = await fetchTasks()
+      setTasks(fetchedTasks)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cargar las tareas")
+      console.error("Error loading tasks:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const stored = localStorage.getItem("taskflow-tasks")
-    if (stored) {
-      setTasks(JSON.parse(stored))
-    } else {
-      setTasks(initialTasks)
-    }
+    loadTasks()
   }, [])
 
-  useEffect(() => {
-    if (tasks.length > 0) {
-      localStorage.setItem("taskflow-tasks", JSON.stringify(tasks))
+  const refreshTasks = async () => {
+    await loadTasks()
+  }
+
+  const addTask = async (task: Omit<Task, "id" | "createdAt">) => {
+    try {
+      setError(null)
+      await createTask(task)
+      await refreshTasks()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear la tarea")
+      throw err
     }
-  }, [tasks])
+  }
 
-  const addTask = (task: Omit<Task, "id" | "createdAt">) => {
-    const newTask: Task = {
-      ...task,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
+  const updateTask = async (id: string, updatedTask: Partial<Task>) => {
+    try {
+      setError(null)
+      await updateTaskApi(id, updatedTask)
+      await refreshTasks()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar la tarea")
+      throw err
     }
-    setTasks((prev) => [...prev, newTask])
   }
 
-  const updateTask = (id: string, updatedTask: Partial<Task>) => {
-    setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, ...updatedTask } : task)))
+  const deleteTask = async (id: string) => {
+    try {
+      setError(null)
+      await deleteTaskApi(id)
+      await refreshTasks()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar la tarea")
+      throw err
+    }
   }
 
-  const deleteTask = (id: string) => {
-    setTasks((prev) => prev.filter((task) => task.id !== id))
-  }
+  const toggleTaskStatus = async (id: string) => {
+    const task = tasks.find((t) => t.id === id)
+    if (!task) return
 
-  const toggleTaskStatus = (id: string) => {
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id === id) {
-          const newStatus: Status = task.status === "Completada" ? "Pendiente" : "Completada"
-          return { ...task, status: newStatus }
-        }
-        return task
-      }),
-    )
+    const newStatus: Status = task.status === "Completada" ? "Pendiente" : "Completada"
+    await updateTask(id, { status: newStatus })
   }
 
   return (
-    <TaskContext.Provider value={{ tasks, addTask, updateTask, deleteTask, toggleTaskStatus }}>
+    <TaskContext.Provider value={{ tasks, loading, error, addTask, updateTask, deleteTask, toggleTaskStatus, refreshTasks }}>
       {children}
     </TaskContext.Provider>
   )
